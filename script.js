@@ -66,6 +66,8 @@ const inputDistance = document.querySelector('.form__input--distance');
 const inputDuration = document.querySelector('.form__input--duration');
 const inputCadence = document.querySelector('.form__input--cadence');
 const inputElevation = document.querySelector('.form__input--elevation');
+const deleteAllBtn = document.querySelector('.delete__all__button');
+
 
 class App {
     #map;
@@ -86,6 +88,11 @@ class App {
         inputType.addEventListener('change', this._toggleElevationField);
         containerWorkouts.addEventListener('click',
             this._moveToPopup.bind(this));
+
+        //Delete All Inputs
+        deleteAllBtn.addEventListener('click', this.reset)
+        //delete workout
+        containerWorkouts.addEventListener('click', this._deleteWorkout.bind(this))
     }
 
     _getPosition() {
@@ -117,6 +124,32 @@ class App {
         this.#workouts.forEach(work => {
             this._renderWorkoutMarker(work)
         });
+    }
+
+    _onMapClick(mapE) {
+        if (!form.classList.contains('hidden')) {
+            this.#mapEvent = mapE;
+            this._refreshMap();
+            this._renderTempMarker(mapE.latlng, 'New');
+            inputDistance.focus();
+        } else {
+            this._showForm(mapE);
+        }
+    }
+    _refreshMap(coords) {
+        // Storing current map center to plug into _loadMap on next load:
+        const currentCoords = !coords
+            ? {
+                coords: {
+                    latitude: this.#map.getCenter().lat,
+                    longitude: this.#map.getCenter().lng,
+                },
+            }
+            : coords;
+
+        // Reloading the map:
+        this.#map.remove();
+        this._loadMap(currentCoords);
     }
 
     _showForm(mapE) {
@@ -209,10 +242,15 @@ class App {
     }
 
     _renderWorkout(workout) {
-
         let html = `
-     <li class="workout workout--${workout.type}" data-id="${workout.id}">
-          <h2 class="workout__title">${workout.description}</h2>
+        <li class="workout workout--${workout.type}" data-id="${workout.id}">
+        <h2 class="workout__title">${workout.description}</h2>
+        <div class="workout__edit__btn__box">
+        <button class="edit__btn">🔨</button>
+          </div>
+        <div class="workout__delate__btn__box">
+        <button class="delete__btn">❌</button>
+          </div>
           <div class="workout__details">
             <span class="workout__icon">${workout.type === 'running' ? '🏃‍♂️' : '🚴‍♀️'}</span>
             <span class="workout__value">${workout.distance}</span>
@@ -291,6 +329,33 @@ class App {
         localStorage.removeItem('workout');
         location.reload();
     }
+
+    _refreshCards() {
+        this._setLocalStorage();
+        containerWorkouts.querySelectorAll('.workout')
+            .forEach(el => el.remove());
+        // this._getLocalStorage();
+    }
+
+    _deleteById(id) {
+        if (this.#workouts.length > 0) {
+            this.#workouts = this.#workouts.filter(e => e.id !== id);
+            // Removing the card:
+            this._refreshCards();
+
+            // Removing the marker:
+            this._refreshMap();
+        }
+    }
+    _deleteWorkout(e) {
+        const workoutEl = e.target.closest('.delete__btn');
+        if (!workoutEl) return;
+
+        console.log(workoutEl, this.#workouts)
+        // this.#workouts.pop();
+        this._deleteById(workoutEl.dataset.id)
+    }
+
 }
 
 const app = new App();
